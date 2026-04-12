@@ -1,0 +1,11 @@
+app:
+  title: "Music Bot Control"
+api:
+  baseUrl: "http://localhost:8080/api"
+player:
+  defaultVolume: 65
+  maxQueueItems: 20
+features:
+  voteSkip: true
+logging:
+  level: "INFO"

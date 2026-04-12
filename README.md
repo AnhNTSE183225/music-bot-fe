@@ -1,73 +1,48 @@
-# React + TypeScript + Vite
+# Music Bot Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend control panel for a music bot, built with Vite + React + TypeScript and using shadcn as the primary UI library.
 
-Currently, two official plugins are available:
+## Stack
+- Vite + React + TypeScript
+- shadcn/ui components
+- Tailwind CSS v4
+- Zod + YAML for centralized app config validation
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## Run
+```powershell
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Or use:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+./start.ps1
 ```
+
+## Build
+```powershell
+npm run build
+```
+
+## Architecture
+- Controller: `src/controllers/use-music-controller.ts`
+- Service: `src/services/music-service.ts`
+- Repository: `src/repositories/music-repository.ts`
+- Config: `src/config/app-config.yml` + `src/config/app-config.ts`
+
+## Features
+- Live playback status, queue, vote skip, and volume from MusicBot HTTP API
+- Center YouTube panel for search + preview
+- Click-to-confirm add-to-queue modal for YouTube links
+- Top-right admin login button for protected controls
+
+## Configuration
+- Master config file: `src/config/app-config.yml`
+- Environment override: `VITE_MUSIC_API_BASE_URL`
+- Fail-fast validation is executed at startup with Zod.
+
+## Notes
+- Default API URL points to `http://localhost:8080/api`.
+- The direct YouTube embed preview was removed because it was not contributing useful behavior.
+- Admin access uses credentials from the bot process `.env` file via the web API login dialog.
