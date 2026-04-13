@@ -46,3 +46,21 @@ npm run build
 - Default API URL points to `http://localhost:8080/api`.
 - The direct YouTube embed preview was removed because it was not contributing useful behavior.
 - Admin access uses credentials from the bot process `.env` file via the web API login dialog.
+
+## CI/CD: GitHub Pages
+- Workflow file: `.github/workflows/music-bot-fe-pages.yml`
+- Deployment target: GitHub Pages using GitHub Actions
+- Trigger on pushes to `main` affecting `music-bot-fe/**`
+- Trigger by manual run (`workflow_dispatch`)
+
+### Repository secrets
+- `MUSIC_API_BASE_URL`: backend API base URL for production builds.
+
+During CI build, `MUSIC_API_BASE_URL` is injected into `VITE_MUSIC_API_BASE_URL`, which overrides `src/config/app-config.yml`.
+
+### Important behavior
+GitHub does not emit workflow events when a secret value changes. Because of that, changing `MUSIC_API_BASE_URL` alone will not immediately redeploy.
+
+To apply a new secret value, use one of these:
+- Run the workflow manually from the Actions tab.
+- Push a commit that touches `music-bot-fe/**`.
