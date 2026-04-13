@@ -57,6 +57,10 @@ function App() {
     adminUser,
     lastError,
     clearError,
+    youtubeApiKey,
+    hasYouTubeApiKey,
+    youtubeApiPortalUrl,
+    setYouTubeApiKey,
     canVoteSkip,
     appTitle,
   } = useMusicController()
@@ -69,6 +73,18 @@ function App() {
   const [adminPassword, setAdminPassword] = useState('')
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loginBusy, setLoginBusy] = useState(false)
+  const [volumeDraft, setVolumeDraft] = useState<number | null>(null)
+  const [youtubeKeyOpen, setYoutubeKeyOpen] = useState(false)
+  const [youtubeKeyInput, setYoutubeKeyInput] = useState(youtubeApiKey)
+
+  const referrerListValue = Array.from(
+    new Set([
+      'http://localhost:5173/*',
+      'http://127.0.0.1:5173/*',
+      `${window.location.origin}/*`,
+    ])
+  ).join('\n')
+  const apiRestrictionValue = 'YouTube Data API v3'
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60)
@@ -94,7 +110,32 @@ function App() {
 
   const handleSearch = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+
+    if (!hasYouTubeApiKey) {
+      setYoutubeKeyInput(youtubeApiKey)
+      setYoutubeKeyOpen(true)
+      return
+    }
+
     await onSearchYouTube(searchQuery)
+  }
+
+  const handleSaveYouTubeKey = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setYouTubeApiKey(youtubeKeyInput)
+    setYoutubeKeyOpen(false)
+  }
+
+  const copyToClipboard = async (value: string) => {
+    await navigator.clipboard.writeText(value)
+  }
+
+  const handleVolumeCommit = async (value: number) => {
+    try {
+      await onVolumeChange(value)
+    } finally {
+      setVolumeDraft(null)
+    }
   }
 
   const handleConfirmAdd = async () => {
@@ -196,13 +237,18 @@ function App() {
                 <span>{snapshot.volume}%</span>
               </div>
               <Slider
-                value={[snapshot.volume]}
+                value={[volumeDraft ?? snapshot.volume]}
                 max={100}
                 step={1}
                 disabled={!isAdmin}
                 onValueChange={(value) => {
                   const nextValue = Array.isArray(value) ? value[0] : value
-                  void onVolumeChange(nextValue ?? snapshot.volume)
+                  setVolumeDraft(nextValue ?? snapshot.volume)
+                }}
+                onValueCommitted={(value) => {
+                  const nextValue = Array.isArray(value) ? value[0] : value
+                  setVolumeDraft(nextValue ?? snapshot.volume)
+                  void handleVolumeCommit(nextValue ?? snapshot.volume)
                 }}
               />
               {!isAdmin && (
@@ -262,13 +308,23 @@ function App() {
                 />
               </div>
 
-              <Button type="submit" disabled={isSearching} className="bg-cyan-400 text-black hover:bg-cyan-300">
+              <Button type="submit" className="bg-cyan-400 text-black hover:bg-cyan-300">
                 <Search className="mr-2 h-4 w-4" />
                 {isSearching ? 'Searching...' : 'Search YouTube'}
               </Button>
             </form>
 
-            <ScrollArea className="h-[460px] rounded-xl border border-white/10 p-2">
+            {!hasYouTubeApiKey && (
+              <div className="rounded-lg border border-amber-300/20 bg-amber-200/10 px-3 py-2 text-sm text-amber-200">
+                YouTube API key is not set on this browser. Press search to open Google Cloud and paste your key.
+              </div>
+            )}
+
+            <Button type="button" variant="outline" className="border-white/15" onClick={() => setYoutubeKeyOpen(true)}>
+              Show API Key Setup Instructions
+            </Button>
+
+            <ScrollArea className="h-[460px]">
               <ul className="space-y-2">
                 {searchResults.map((result) => (
                   <li key={result.url} className="rounded-lg border border-white/10 bg-zinc-900/70 p-3">
@@ -320,20 +376,26 @@ function App() {
           </CardHeader>
           <CardContent>
             {isAdmin && (
-              <div className="mb-4 rounded-xl border border-white/10 bg-zinc-950/70 p-3">
+              <div className="mb-4">
                 <p className="mb-3 text-sm font-medium text-zinc-100">Admin Controls</p>
                 <div className="grid grid-cols-2 gap-2">
-                  <Button variant="outline" onClick={() => void adminClear()}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Clear queue
+                  <Button variant="outline" className="justify-start gap-2" onClick={() => void adminClear()}>
+                    <span className="inline-flex w-4 justify-center">
+                      <Trash2 className="h-4 w-4" />
+                    </span>
+                    <span>Clear queue</span>
                   </Button>
-                  <Button variant="outline" onClick={() => void adminSkip()}>
-                    <SkipForward className="mr-2 h-4 w-4" />
-                    Skip now
+                  <Button variant="outline" className="justify-start gap-2" onClick={() => void adminSkip()}>
+                    <span className="inline-flex w-4 justify-center">
+                      <SkipForward className="h-4 w-4" />
+                    </span>
+                    <span>Skip now</span>
                   </Button>
-                  <Button variant="outline" onClick={() => void adminStop()}>
-                    <Square className="mr-2 h-4 w-4" />
-                    Stop bot
+                  <Button variant="outline" className="justify-start gap-2" onClick={() => void adminStop()}>
+                    <span className="inline-flex w-4 justify-center">
+                      <Square className="h-4 w-4" />
+                    </span>
+                    <span>Stop bot</span>
                   </Button>
                 </div>
               </div>
@@ -346,8 +408,8 @@ function App() {
               </TabsList>
 
               <TabsContent value="queue" className="mt-4">
-                <div className="rounded-2xl border border-white/10 bg-zinc-950/50 p-2 shadow-inner shadow-black/30">
-                  <div className="mb-3 flex items-center justify-between px-2 pt-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
+                <div>
+                  <div className="mb-3 flex items-center justify-between px-1 text-xs uppercase tracking-[0.2em] text-zinc-500">
                     <span>Upcoming tracks</span>
                     <span>{snapshot.queue.length} items</span>
                   </div>
@@ -516,6 +578,89 @@ function App() {
               {isQueueing ? 'Adding...' : 'Add To Queue'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={youtubeKeyOpen} onOpenChange={setYoutubeKeyOpen}>
+        <DialogContent className="border-white/10 bg-zinc-950 text-zinc-100">
+          <DialogHeader>
+            <DialogTitle>Set Your YouTube API Key</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              This key is saved only in your browser local storage.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="grid gap-3" onSubmit={handleSaveYouTubeKey}>
+            <div className="rounded-lg border border-white/10 bg-zinc-900/60 p-3 text-xs text-zinc-300">
+              <p className="font-medium text-zinc-100">Google Cloud quick setup</p>
+              <p className="mt-2">1. Create or choose a project in Google Cloud Console.</p>
+              <p>2. Enable YouTube Data API v3.</p>
+              <p>3. Create an API key under Credentials.</p>
+              <p>4. Set Application restrictions to HTTP referrers and paste the values below.</p>
+              <p>5. Set API restrictions to Restrict key and choose YouTube Data API v3.</p>
+            </div>
+
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-zinc-300" htmlFor="youtube-referrers-value">
+                  HTTP referrers (website restrictions)
+                </label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => void copyToClipboard(referrerListValue)}>
+                  Copy
+                </Button>
+              </div>
+              <textarea
+                id="youtube-referrers-value"
+                value={referrerListValue}
+                readOnly
+                rows={4}
+                className="rounded-md border border-white/15 bg-zinc-900/80 px-3 py-2 text-xs text-zinc-200"
+              />
+            </div>
+
+            <div className="grid gap-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm text-zinc-300" htmlFor="youtube-api-restriction-value">
+                  API restriction value
+                </label>
+                <Button type="button" variant="ghost" size="sm" onClick={() => void copyToClipboard(apiRestrictionValue)}>
+                  Copy
+                </Button>
+              </div>
+              <Input id="youtube-api-restriction-value" value={apiRestrictionValue} readOnly className="border-white/15 bg-zinc-900/80" />
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm text-zinc-300" htmlFor="youtube-api-key">
+                YouTube Data API v3 key
+              </label>
+              <Input
+                id="youtube-api-key"
+                value={youtubeKeyInput}
+                onChange={(event) => setYoutubeKeyInput(event.target.value)}
+                autoComplete="off"
+                placeholder="AIza..."
+                className="border-white/15 bg-zinc-900/80"
+              />
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              className="justify-start border-white/15"
+              onClick={() => window.open(youtubeApiPortalUrl, '_blank', 'noopener,noreferrer')}
+            >
+              Open Google Cloud Credentials page
+              <ExternalLink className="ml-2 h-3.5 w-3.5" />
+            </Button>
+
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setYoutubeKeyOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">Save key</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </main>

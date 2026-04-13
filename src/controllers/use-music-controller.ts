@@ -4,13 +4,18 @@ import { appConfig } from '@/config/app-config'
 import { logger } from '@/lib/logger'
 import { HttpMusicRepository } from '@/repositories/music-repository'
 import { MusicService } from '@/services/music-service'
+import { BrowserYouTubeRepository } from '@/repositories/youtube-repository'
+import { YouTubeService } from '@/services/youtube-service'
 import type { AuthUser, MusicSnapshot, YouTubeSearchResult } from '@/types/music'
 
 const repository = new HttpMusicRepository()
 const service = new MusicService(repository)
+const youtubeRepository = new BrowserYouTubeRepository()
+const youtubeService = new YouTubeService(youtubeRepository)
 
 const voterStorageKey = 'musicbot:voter-id'
 const adminTokenStorageKey = 'musicbot:admin-token'
+const youtubeApiPortalUrl = 'https://console.cloud.google.com/apis/credentials'
 
 const getOrCreateVoterId = () => {
   const existing = localStorage.getItem(voterStorageKey)
@@ -32,6 +37,7 @@ export function useMusicController() {
   const [authToken, setAuthToken] = useState<string | null>(null)
   const [adminUser, setAdminUser] = useState<AuthUser | null>(null)
   const [isAuthLoading, setIsAuthLoading] = useState(true)
+  const [youtubeApiKey, setYoutubeApiKeyState] = useState<string>(() => BrowserYouTubeRepository.getStoredApiKey())
 
   const refreshSnapshot = async () => {
     const nextSnapshot = await service.getSnapshot()
@@ -131,9 +137,14 @@ export function useMusicController() {
       return
     }
 
-    const result = await service.setVolume(authToken, volume)
-    setSnapshot(result.snapshot)
-    logger.debug('Volume changed', { volume, user: result.user })
+    try {
+      const result = await service.setVolume(authToken, volume)
+      setSnapshot(result.snapshot)
+      logger.debug('Volume changed', { volume, user: result.user })
+    } catch (error) {
+      setLastError(String(error))
+      logger.error('Failed to change volume', error)
+    }
   }
 
   const onSearchYouTube = async (query: string) => {
@@ -147,7 +158,7 @@ export function useMusicController() {
     setLastError(null)
 
     try {
-      const results = await service.searchYouTube(trimmed)
+      const results = await youtubeService.search(trimmed)
       setSearchResults(results)
       logger.info('YouTube search completed', { count: results.length })
     } catch (error) {
@@ -230,6 +241,16 @@ export function useMusicController() {
     setLastError(null)
   }
 
+  const setYouTubeApiKey = (apiKey: string) => {
+    BrowserYouTubeRepository.setStoredApiKey(apiKey)
+    setYoutubeApiKeyState(BrowserYouTubeRepository.getStoredApiKey())
+  }
+
+  const clearYouTubeApiKey = () => {
+    BrowserYouTubeRepository.setStoredApiKey('')
+    setYoutubeApiKeyState('')
+  }
+
   return {
     snapshot,
     progress,
@@ -249,6 +270,11 @@ export function useMusicController() {
     isQueueing,
     lastError,
     clearError,
+    youtubeApiKey,
+    hasYouTubeApiKey: Boolean(youtubeApiKey),
+    youtubeApiPortalUrl,
+    setYouTubeApiKey,
+    clearYouTubeApiKey,
     isAdmin: Boolean(authToken && adminUser),
     adminUser,
     isAuthLoading,

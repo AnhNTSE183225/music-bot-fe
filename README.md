@@ -40,6 +40,7 @@ npm run build
 ## Configuration
 - Master config file: `src/config/app-config.yml`
 - Environment override: `VITE_MUSIC_API_BASE_URL`
+- Client-side YouTube search key is set by each user in-browser (stored in localStorage)
 - Fail-fast validation is executed at startup with Zod.
 
 ## Notes

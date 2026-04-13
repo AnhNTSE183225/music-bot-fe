@@ -1,7 +1,7 @@
 app:
   title: "Music Bot Control"
 api:
-  baseUrl: "http://localhost:8080/api"
+  baseUrl: "https://theanh0804.id.vn/api"
 player:
   defaultVolume: 65
   maxQueueItems: 20
